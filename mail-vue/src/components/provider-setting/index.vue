@@ -71,7 +71,7 @@
           <el-button type="primary" :loading="saving" @click="save">保存</el-button>
         </header>
 
-        <main class="provider-config-main">
+        <main class="provider-config-main" @wheel.stop @touchmove.stop>
           <section class="config-intro">
             <Icon icon="solar:shield-keyhole-linear" width="23" />
             <div>
@@ -599,14 +599,15 @@ watch(() => props.setting?.providerPriority, value => {
   position: fixed;
   inset: 0;
   z-index: 4000;
-  width: 100%;
-  height: 100%;
-  min-height: 100dvh;
-  overflow-x: hidden;
-  overflow-y: auto;
-  -webkit-overflow-scrolling: touch;
-  touch-action: pan-y;
-  overscroll-behavior-y: contain;
+  width: 100vw;
+  max-width: 100vw;
+  height: 100vh;
+  height: 100dvh;
+  min-height: 0;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  overflow: hidden;
+  touch-action: auto;
   color: var(--el-text-color-primary);
   background:
       radial-gradient(circle at 12% 4%, color-mix(in srgb, var(--el-color-primary) 18%, transparent), transparent 32%),
@@ -632,7 +633,13 @@ watch(() => props.setting?.providerPriority, value => {
 .provider-config-main {
   width: 100%;
   min-width: 0;
-  overflow: visible;
+  min-height: 0;
+  overflow-x: hidden;
+  overflow-y: scroll;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+  touch-action: auto;
+  scrollbar-gutter: stable;
   padding: 20px max(16px, env(safe-area-inset-right)) max(36px, calc(24px + env(safe-area-inset-bottom))) max(16px, env(safe-area-inset-left));
 }
 .provider-config-main > * { width: min(860px, 100%); margin-left: auto; margin-right: auto; box-sizing: border-box; }
@@ -723,6 +730,19 @@ watch(() => props.setting?.providerPriority, value => {
 }
 .domain-danger-zone strong { color: var(--el-color-danger); }
 .domain-danger-zone p { margin: 4px 0 0; color: var(--el-text-color-secondary); font-size: 12px; line-height: 1.55; }
+
+.provider-config-main::-webkit-scrollbar { width: 10px; }
+.provider-config-main::-webkit-scrollbar-track { background: transparent; }
+.provider-config-main::-webkit-scrollbar-thumb {
+  border: 3px solid transparent;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--el-text-color-placeholder) 55%, transparent);
+  background-clip: padding-box;
+}
+.provider-config-main::-webkit-scrollbar-thumb:hover {
+  background: color-mix(in srgb, var(--el-text-color-secondary) 68%, transparent);
+  background-clip: padding-box;
+}
 
 @media (max-width: 860px) {
   .provider-status-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
