@@ -417,7 +417,6 @@ function submitRegister() {
     return
   }
 
-  console.log(registerForm.email)
 
   if (registerForm.email.length < settingStore.settings.minEmailPrefix) {
     ElMessage({

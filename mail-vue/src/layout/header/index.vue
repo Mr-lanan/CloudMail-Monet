@@ -476,4 +476,57 @@ function formatName(email) {
 .el-tooltip__trigger:first-child:focus-visible {
   outline: unset;
 }
+
+
+.header {
+  padding: 0 10px 0 8px;
+  border: 1px solid color-mix(in srgb, var(--el-border-color) 76%, transparent);
+  border-radius: 18px;
+  background: color-mix(in srgb, var(--el-bg-color) 82%, transparent);
+  box-shadow: 0 12px 34px rgba(57, 79, 96, .10);
+  backdrop-filter: blur(18px) saturate(115%);
+}
+.breadcrumb-item {
+  font-size: 15px;
+  letter-spacing: .15px;
+}
+.writer-box .writer {
+  width: 38px;
+  height: 38px;
+  border-radius: 13px;
+  background: linear-gradient(135deg, #6d93ad, #9488ae 56%, #76a08d);
+  box-shadow: 0 9px 20px rgba(83, 104, 130, .24);
+}
+.writer-box:hover .writer { transform: translateY(-1px) scale(1.03); }
+.toolbar .icon-item {
+  width: 34px;
+  height: 34px;
+  border-radius: 12px;
+  transition: background .18s ease, transform .18s ease;
+}
+.toolbar .icon-item:hover {
+  transform: translateY(-1px);
+  background: color-mix(in srgb, var(--el-color-primary-light-9) 78%, transparent);
+}
+.toolbar .avatar .avatar-text {
+  height: 34px;
+  width: 34px;
+  border-radius: 12px;
+  border-color: color-mix(in srgb, var(--el-color-primary) 28%, var(--el-border-color));
+  background: linear-gradient(145deg, var(--el-bg-color), var(--el-fill-color-light));
+  font-weight: 750;
+}
+.user-details {
+  padding-top: 4px;
+  border-radius: 16px;
+}
+.user-details .details-avatar {
+  width: 48px;
+  height: 48px;
+  border-radius: 16px;
+  background: linear-gradient(145deg, var(--el-color-primary-light-9), var(--el-fill-color-light));
+  color: var(--el-color-primary);
+  border-color: var(--el-color-primary-light-7);
+  font-weight: 800;
+}
 </style>

@@ -1,9 +1,12 @@
 <template>
   <el-scrollbar class="scroll">
     <div>
-      <div class="title" >
-        <Icon icon="mdi:email-outline" width="24" height="24" />
-        <div>{{settingStore.settings.title}}</div>
+      <div class="title">
+        <div class="brand-icon"><Icon icon="mdi:email-outline" width="22" height="22" /></div>
+        <div class="brand-copy">
+          <strong>{{ settingStore.settings.title || 'CloudMail' }}</strong>
+          <span>MONET MAIL STUDIO</span>
+        </div>
       </div>
       <el-menu :collapse="false" text-color="#fff" active-text-color="#fff" style="margin-top: 10px">
         <el-menu-item @click="router.push({name: 'email'})" index="email"
@@ -81,100 +84,67 @@ const route = useRoute();
 </script>
 
 <style lang="scss" scoped>
-
 .title {
-  margin: 15px 10px;
-  height: 45px;
-  border-radius: 6px;
+  margin: 16px 14px 12px;
+  min-height: 62px;
+  border-radius: 18px;
   display: flex;
-  position: relative;
-  font-size: 16px;
-  font-weight: bold;
   align-items: center;
-  justify-content: center;
-  gap: 5px;
-  color: #ffffff;
-  background: linear-gradient(135deg, #789eb3, #9a8fb5 55%, #7fa99a);
-  box-shadow: 0 10px 26px rgba(41, 70, 84, .28);
-  transition: all 0.3s ease;
-  max-width: 240px;
-  padding: 0 10px;
-  > div {
-    overflow: hidden;
-    white-space: nowrap;
-    text-overflow: ellipsis;
-    max-width: calc(240px - 20px - 30px);
-  }
-
-  :deep(.el-icon) {
-    flex-shrink: 0;
-    font-size: 20px;
-  }
-
-  .user-right-icon {
-    align-self: center;
-    position: absolute;
-    font-size: 12px;
-    right: 8px;
-    color: #ffffff;
-  }
-
-}
-
-
-.manage-title {
-  margin-top: 10px;
-  padding-left: 20px;
+  gap: 11px;
   color: #fff;
+  background:
+      radial-gradient(circle at 12% 0%, rgba(255,255,255,.24), transparent 35%),
+      linear-gradient(135deg, #789eb3, #958bb2 56%, #7ca28f);
+  box-shadow: 0 14px 32px rgba(36, 59, 73, .30);
+  padding: 10px 13px;
 }
-
+.brand-icon {
+  width: 38px;
+  height: 38px;
+  flex: 0 0 38px;
+  display: grid;
+  place-items: center;
+  border-radius: 13px;
+  background: rgba(255,255,255,.18);
+  border: 1px solid rgba(255,255,255,.24);
+  backdrop-filter: blur(8px);
+}
+.brand-copy { min-width: 0; display: flex; flex-direction: column; }
+.brand-copy strong { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; font-size: 15px; letter-spacing: .2px; }
+.brand-copy span { margin-top: 2px; font-size: 9px; letter-spacing: 1.15px; color: rgba(255,255,255,.72); }
+.manage-title {
+  margin: 18px 18px 7px;
+  color: rgba(255,255,255,.58);
+  font-size: 11px;
+  font-weight: 750;
+  letter-spacing: 1.2px;
+}
 .el-menu-item {
-  margin: 5px 10px !important;
-  border-radius: 6px;
-  height: 36px;
-  padding: 10px !important;
+  margin: 5px 11px !important;
+  border-radius: 13px;
+  height: 42px;
+  padding: 10px 13px !important;
+  transition: transform .18s ease, background .18s ease, box-shadow .18s ease;
 }
-
 .choose-item {
-  font-weight: bold;
-  background: rgba(255, 255, 255, 0.08) !important;
-  backdrop-filter: blur(4px);
+  font-weight: 700;
+  background: linear-gradient(90deg, rgba(255,255,255,.19), rgba(255,255,255,.08)) !important;
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,.12), 0 8px 20px rgba(26,43,52,.16);
+  backdrop-filter: blur(8px);
 }
-
 @media (hover: hover) {
   .el-menu-item:hover {
-    background: rgba(255, 255, 255, 0.08) !important;
+    transform: translateX(3px);
+    background: rgba(255,255,255,.11) !important;
   }
 }
-
-.menu-name {
-  user-select: none;
+.menu-name { user-select: none; }
+:deep(.el-scrollbar__wrap--hidden-default) {
+  background:
+      radial-gradient(circle at 40% 4%, rgba(175, 203, 218, .18), transparent 24%),
+      linear-gradient(180deg, #425f70 0%, #526c77 47%, #4c695e 100%) !important;
 }
-
-
-:deep(.el-scrollbar__wrap--hidden-default ) {
-  background: linear-gradient(180deg, #4f6978 0%, #5d7480 42%, #536d65 100%) !important;
-}
-
-:deep(.el-menu-item) {
-  background: var(--aside-backgound);
-}
-
-:deep(.el-menu) {
-  background: var(--aside-backgound);
-}
-
-.el-menu {
-  border-right: 0;
-  width: 260px;
-}
-
-:deep(.el-divider__text) {
-  background: var(--aside-backgound);
-  color: #FFFFFF;
-}
-
-.scroll {
-
-}
+:deep(.el-menu-item), :deep(.el-menu) { background: transparent; }
+.el-menu { border-right: 0; width: 260px; }
+:deep(.el-divider__text) { background: transparent; color: #fff; }
 </style>

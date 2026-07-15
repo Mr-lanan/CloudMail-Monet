@@ -91,19 +91,21 @@ onBeforeUnmount(() => {
 
 .main-container {
   min-height: 100%;
-  background: var(--el-bg-color);
+  background: transparent;
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
 }
 
 .el-main {
-  padding: 0;
+  padding: 0 14px 14px;
+  overflow: hidden;
 }
 
 .el-header {
-  background: var(--el-bg-color);
-  border-bottom: solid 1px var(--el-border-color);
-  padding: 0 0 0 0;
+  height: 68px;
+  padding: 10px 0 8px;
+  background: transparent;
+  border-bottom: 0;
 }
 
 .overlay-show {
@@ -112,7 +114,8 @@ onBeforeUnmount(() => {
   left: 0;
   width: 100vw;
   height: 100vh;
-  background: rgba(0, 0, 0, 0.4);
+  background: rgba(26, 38, 46, 0.48);
+  backdrop-filter: blur(3px);
   z-index: 99;
   transition: all 0.3s;
 }

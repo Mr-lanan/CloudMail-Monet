@@ -184,7 +184,7 @@
               :setting="setting"
               :domains="settingStore.domainList"
               :loading="settingLoading"
-              @save="editSetting"
+              :save-handler="editSetting"
           />
 
           <!-- Object Storage Card -->
@@ -750,7 +750,7 @@ defineOptions({
   name: 'sys-setting'
 })
 
-const currentVersion = 'v3.0.0-monet'
+const currentVersion = 'v3.1.0-monet'
 const hasUpdate = ref(false)
 let getUpdateErrorCount = 1;
 const {t, locale} = useI18n();
@@ -855,7 +855,7 @@ getSettings()
 getUpdate()
 
 function getSettings() {
-  settingQuery().then(settingData => {
+  return settingQuery().then(settingData => {
     setting.value = settingData
     settingStore.domainList = settingData.domainList;
     resendTokenForm.domain = setting.value.domainList[0]
@@ -1293,23 +1293,23 @@ function jump(href) {
   doc.click()
 }
 
-function editSetting(settingForm, refreshStatus = true) {
-  if (settingLoading.value) return
+async function editSetting(settingForm, refreshStatus = true) {
+  if (settingLoading.value) return false
   settingLoading.value = true
 
-  settingSet(settingForm).then(() => {
-    settingLoading.value = false
+  try {
+    await settingSet(settingForm)
+    if (setting.value.manyEmail === 1) {
+      accountStore.currentAccountId = userStore.user.account.accountId;
+    }
+    if (refreshStatus) {
+      await getSettings()
+    }
     ElMessage({
       message: t('saveSuccessMsg'),
       type: "success",
       plain: true
     })
-    if (setting.value.manyEmail === 1) {
-      accountStore.currentAccountId = userStore.user.account.accountId;
-    }
-    if (refreshStatus) {
-      getSettings()
-    }
     editTitleShow.value = false
     r2DomainShow.value = false
     resendTokenFormShow.value = false
@@ -1322,13 +1322,15 @@ function editSetting(settingForm, refreshStatus = true) {
     noticePopupShow.value = false
     addS3Show.value = false
     emailPrefixShow.value = false
-  }).catch((e) => {
+    return true
+  } catch (e) {
     loginOpacity.value = setting.value.loginOpacity
-    setting.value = {...setting.value, ...JSON.parse(backup)}
-  }).finally(() => {
+    setting.value = {...setting.value, ...JSON.parse(backup || '{}')}
+    throw e
+  } finally {
     settingLoading.value = false
     clearS3Loading.value = false
-  })
+  }
 }
 </script>
 

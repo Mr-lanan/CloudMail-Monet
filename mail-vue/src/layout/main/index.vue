@@ -147,7 +147,7 @@ const handleResize = () => {
 .main-box-show {
   display: grid;
   grid-template-columns: 260px  1fr;
-  height: calc(100% - 60px);
+  height: calc(100% - 68px);
   @media (max-width: 767px) {
     grid-template-columns: 1fr;
   }
@@ -156,12 +156,18 @@ const handleResize = () => {
 .main-box-hide {
   display: grid;
   grid-template-columns: 1fr;
-  height: calc(100% - 60px);
+  height: calc(100% - 68px);
 }
 
 
 .main-view {
-  background: var(--el-bg-color);
+  min-width: 0;
+  overflow: hidden;
+  background: color-mix(in srgb, var(--el-bg-color) 87%, transparent);
+  border: 1px solid color-mix(in srgb, var(--el-border-color) 78%, transparent);
+  border-radius: 20px;
+  box-shadow: 0 18px 48px rgba(56, 79, 96, .11);
+  backdrop-filter: blur(18px) saturate(112%);
 }
 
 

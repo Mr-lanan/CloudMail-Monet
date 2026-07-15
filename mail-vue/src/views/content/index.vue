@@ -28,6 +28,9 @@
               <div class="receive"><span class="source">{{$t('recipient')}}</span><span class="receive-email">{{  formateReceive(email.recipient) }}</span></div>
               <div class="date">
                 <div>{{ formatDetailDate(email.createTime) }}</div>
+                <el-tag v-if="email.sendProvider" size="small" effect="light" round>
+                  经 {{ providerName(email.sendProvider) }} 发送
+                </el-tag>
               </div>
             </div>
             <el-alert v-if="email.status === 3" :closable="false" :title="toMessage(email.message)" class="email-msg" type="error" show-icon />
@@ -117,6 +120,19 @@ onMounted(() => {
 onUnmounted(() => {
   emailStore.contentData.showUnread = false;
 })
+
+
+function providerName(key) {
+  const names = {
+    internal: '站内投递',
+    resend: 'Resend',
+    mailersend: 'MailerSend',
+    brevo: 'Brevo',
+    postmark: 'Postmark',
+    ses: 'Amazon SES'
+  };
+  return names[key] || key;
+}
 
 function openReply() {
   uiStore.writerRef.openReply(email)
@@ -352,6 +368,10 @@ const handleDelete = () => {
       .date {
         color: var(--regular-text-color);
         margin-bottom: 6px;
+        display: flex;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 8px;
       }
 
       .email-msg {
