@@ -115,7 +115,7 @@
               >
                 <Icon class="drag-handle" icon="mingcute:dots-line" width="20" />
                 <span class="priority-number">{{ index + 1 }}</span>
-                <button type="button" class="priority-provider" @click="activeProvider = provider.key">
+                <button type="button" class="priority-provider" @click="focusProvider(provider.key)">
                   <strong>{{ provider.name }}</strong>
                   <small>{{ providerStatusText(provider.key) }}</small>
                 </button>
@@ -143,93 +143,87 @@
             <div class="section-heading">
               <div>
                 <h2>服务商配置</h2>
-                <p>选择一家服务商后在下方编辑，不再弹出嵌套窗口</p>
+                <p>五家服务商分别独立配置，所有配置项直接显示，不再依赖选项卡切换</p>
               </div>
             </div>
 
-            <div class="provider-selector">
-              <button
+            <div class="provider-forms-list">
+              <article
                   v-for="provider in providers"
+                  :id="`provider-config-${provider.key}`"
                   :key="provider.key"
-                  type="button"
-                  class="provider-select-button"
-                  :class="[{ active: activeProvider === provider.key }, providerStatusClass(provider.key)]"
-                  @click="activeProvider = provider.key"
+                  class="provider-form provider-config-block"
+                  :class="[providerStatusClass(provider.key), { focused: focusedProvider === provider.key }]"
               >
-                <span class="provider-mark">{{ provider.short }}</span>
-                <span class="provider-select-copy">
-                  <strong>{{ provider.name }}</strong>
-                  <small>{{ providerStatusText(provider.key) }}</small>
-                </span>
-              </button>
-            </div>
-
-            <div v-for="provider in providers" :key="provider.key" v-show="activeProvider === provider.key" class="provider-form">
-              <div class="provider-form-head">
-                <div>
-                  <h3>{{ provider.name }}</h3>
-                  <p>{{ provider.description }}</p>
-                </div>
-                <div class="enable-control">
-                  <span>{{ form[provider.key].enabled ? '已启用' : '未启用' }}</span>
-                  <el-switch v-model="form[provider.key].enabled" :active-value="1" :inactive-value="0" />
-                </div>
-              </div>
-
-              <template v-if="provider.key === 'resend' || provider.key === 'mailersend' || provider.key === 'brevo'">
-                <div class="field-block">
-                  <label>API Key</label>
-                  <el-input v-model="form[provider.key].apiKey" type="password" show-password autocomplete="new-password" />
-                </div>
-              </template>
-
-              <template v-if="provider.key === 'postmark'">
-                <div class="field-grid">
-                  <div class="field-block">
-                    <label>Server Token</label>
-                    <el-input v-model="form.postmark.serverToken" type="password" show-password autocomplete="new-password" />
+                <div class="provider-form-head">
+                  <div class="provider-identity">
+                    <span class="provider-mark">{{ provider.short }}</span>
+                    <div>
+                      <h3>{{ provider.name }}</h3>
+                      <p>{{ provider.description }}</p>
+                    </div>
                   </div>
-                  <div class="field-block">
-                    <label>Message Stream</label>
-                    <el-input v-model="form.postmark.messageStream" placeholder="outbound" />
+                  <div class="enable-control">
+                    <span>{{ form[provider.key].enabled ? '已启用' : '未启用' }}</span>
+                    <el-switch v-model="form[provider.key].enabled" :active-value="1" :inactive-value="0" />
                   </div>
                 </div>
-              </template>
 
-              <template v-if="provider.key === 'ses'">
-                <div class="field-grid">
+                <template v-if="provider.key === 'resend' || provider.key === 'mailersend' || provider.key === 'brevo'">
                   <div class="field-block">
-                    <label>Access Key ID</label>
-                    <el-input v-model="form.ses.accessKeyId" type="password" show-password autocomplete="new-password" />
+                    <label>API Key</label>
+                    <el-input v-model="form[provider.key].apiKey" type="password" show-password autocomplete="new-password" />
                   </div>
-                  <div class="field-block">
-                    <label>Secret Access Key</label>
-                    <el-input v-model="form.ses.secretAccessKey" type="password" show-password autocomplete="new-password" />
+                </template>
+
+                <template v-if="provider.key === 'postmark'">
+                  <div class="field-grid">
+                    <div class="field-block">
+                      <label>Server Token</label>
+                      <el-input v-model="form.postmark.serverToken" type="password" show-password autocomplete="new-password" />
+                    </div>
+                    <div class="field-block">
+                      <label>Message Stream</label>
+                      <el-input v-model="form.postmark.messageStream" placeholder="outbound" />
+                    </div>
                   </div>
-                  <div class="field-block">
-                    <label>Session Token（可选）</label>
-                    <el-input v-model="form.ses.sessionToken" type="password" show-password autocomplete="new-password" />
+                </template>
+
+                <template v-if="provider.key === 'ses'">
+                  <div class="field-grid">
+                    <div class="field-block">
+                      <label>Access Key ID</label>
+                      <el-input v-model="form.ses.accessKeyId" type="password" show-password autocomplete="new-password" />
+                    </div>
+                    <div class="field-block">
+                      <label>Secret Access Key</label>
+                      <el-input v-model="form.ses.secretAccessKey" type="password" show-password autocomplete="new-password" />
+                    </div>
+                    <div class="field-block">
+                      <label>Session Token（可选）</label>
+                      <el-input v-model="form.ses.sessionToken" type="password" show-password autocomplete="new-password" />
+                    </div>
+                    <div class="field-block">
+                      <label>Region</label>
+                      <el-input v-model="form.ses.region" placeholder="us-east-1" />
+                    </div>
                   </div>
-                  <div class="field-block">
-                    <label>Region</label>
-                    <el-input v-model="form.ses.region" placeholder="us-east-1" />
-                  </div>
+                </template>
+
+                <el-alert
+                    v-if="form[provider.key].enabled && !providerConfigured(provider.key)"
+                    title="该服务商已经启用，但配置还不完整；发送时会自动跳过。"
+                    type="warning"
+                    :closable="false"
+                    show-icon
+                />
+
+                <div class="provider-danger-row">
+                  <el-button type="danger" plain :disabled="saving" @click="clearProvider(provider.key)">
+                    清除此服务商配置
+                  </el-button>
                 </div>
-              </template>
-
-              <el-alert
-                  v-if="form[provider.key].enabled && !providerConfigured(provider.key)"
-                  title="该服务商已经启用，但配置还不完整；发送时会自动跳过。"
-                  type="warning"
-                  :closable="false"
-                  show-icon
-              />
-
-              <div class="provider-danger-row">
-                <el-button type="danger" plain :disabled="saving" @click="clearProvider(provider.key)">
-                  清除此服务商配置
-                </el-button>
-              </div>
+              </article>
             </div>
           </section>
         </main>
@@ -247,7 +241,7 @@
 </template>
 
 <script setup>
-import { computed, onUnmounted, reactive, ref, watch } from 'vue';
+import { computed, nextTick, onUnmounted, reactive, ref, watch } from 'vue';
 import { Icon } from '@iconify/vue';
 
 const props = defineProps({
@@ -269,7 +263,7 @@ const defaultPriority = providers.map(item => item.key);
 const normalizedDomains = computed(() => props.domains.map(item => String(item).replace(/^@/, '')));
 const selectedDomain = ref('');
 const dialogVisible = ref(false);
-const activeProvider = ref('resend');
+const focusedProvider = ref('');
 const priority = ref([...defaultPriority]);
 const dragIndex = ref(-1);
 const localSaving = ref(false);
@@ -310,12 +304,28 @@ function loadForm() {
 
 function openDialog() {
   loadForm();
+  focusedProvider.value = '';
   dialogVisible.value = true;
 }
 
-function openProvider(key) {
-  activeProvider.value = key;
-  openDialog();
+async function openProvider(key) {
+  loadForm();
+  focusedProvider.value = key;
+  dialogVisible.value = true;
+  await nextTick();
+  document.getElementById(`provider-config-${key}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  window.setTimeout(() => {
+    if (focusedProvider.value === key) focusedProvider.value = '';
+  }, 1500);
+}
+
+async function focusProvider(key) {
+  focusedProvider.value = key;
+  await nextTick();
+  document.getElementById(`provider-config-${key}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  window.setTimeout(() => {
+    if (focusedProvider.value === key) focusedProvider.value = '';
+  }, 1500);
 }
 
 function closeConfig() {
@@ -669,12 +679,25 @@ watch(() => props.setting?.providerPriority, value => {
 .priority-provider small { color: var(--el-text-color-secondary); font-size: 11px; }
 .priority-actions { display: flex; gap: 4px; }
 
-.provider-selector { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 8px; }
-.provider-select-button.active {
-  border-color: var(--el-color-primary);
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--el-color-primary) 13%, transparent);
+.provider-forms-list { display: flex; flex-direction: column; gap: 12px; }
+.provider-form {
+  margin: 0;
+  padding: 16px;
+  border: 1px solid var(--el-border-color-lighter);
+  border-radius: 16px;
+  background: color-mix(in srgb, var(--el-bg-color) 94%, transparent);
+  transition: border-color .2s ease, box-shadow .2s ease, transform .2s ease;
+  scroll-margin: 92px;
 }
-.provider-form { margin-top: 18px; padding-top: 18px; border-top: 1px solid var(--el-border-color-lighter); }
+.provider-form.ready { border-color: color-mix(in srgb, var(--el-color-success) 35%, var(--el-border-color-lighter)); }
+.provider-form.warning { border-color: color-mix(in srgb, var(--el-color-warning) 40%, var(--el-border-color-lighter)); }
+.provider-form.focused {
+  border-color: var(--el-color-primary);
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--el-color-primary) 14%, transparent), 0 16px 36px rgba(54, 77, 96, .13);
+  transform: translateY(-1px);
+}
+.provider-identity { min-width: 0; display: flex; align-items: flex-start; gap: 11px; }
+.provider-identity > div { min-width: 0; }
 .provider-form-head { align-items: flex-start; margin-bottom: 18px; }
 .provider-form-head h3 { margin: 0; font-size: 18px; }
 .provider-form-head p { margin: 4px 0 0; color: var(--el-text-color-secondary); font-size: 12px; line-height: 1.55; }
@@ -695,8 +718,6 @@ watch(() => props.setting?.providerPriority, value => {
 
 @media (max-width: 860px) {
   .provider-status-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .provider-selector { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .provider-select-button:last-child:nth-child(odd) { grid-column: 1 / -1; }
 }
 
 @media (max-width: 600px) {
@@ -721,8 +742,7 @@ watch(() => props.setting?.providerPriority, value => {
   .priority-status { display: none; }
   .priority-actions { gap: 2px; }
   .priority-actions :deep(.el-button) { width: 30px; height: 30px; }
-  .provider-selector { grid-template-columns: 1fr; }
-  .provider-select-button:last-child:nth-child(odd) { grid-column: auto; }
+  .provider-form { padding: 14px; }
   .provider-form-head { flex-direction: column; align-items: stretch; }
   .enable-control { justify-content: flex-end; }
   .field-grid { grid-template-columns: 1fr; }
