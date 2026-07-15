@@ -225,16 +225,16 @@
                 </div>
               </article>
             </div>
+
+            <div class="domain-danger-zone">
+              <div>
+                <strong>清除当前域名配置</strong>
+                <p>仅清除 {{ selectedDomain }} 的服务商密钥、启用状态和相关配置。</p>
+              </div>
+              <el-button type="danger" plain :loading="saving" @click="clearDomain">确认清除</el-button>
+            </div>
           </section>
         </main>
-
-        <footer class="provider-config-footer">
-          <el-button type="danger" plain :loading="saving" @click="clearDomain">清除当前域名配置</el-button>
-          <div class="footer-actions">
-            <el-button :disabled="saving" @click="closeConfig">取消</el-button>
-            <el-button type="primary" :loading="saving" @click="save">保存配置</el-button>
-          </div>
-        </footer>
       </div>
     </Teleport>
   </div>
@@ -506,8 +506,7 @@ watch(() => props.setting?.providerPriority, value => {
 .provider-summary,
 .provider-form-head,
 .section-heading,
-.provider-config-header,
-.provider-config-footer {
+.provider-config-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -601,18 +600,24 @@ watch(() => props.setting?.providerPriority, value => {
   inset: 0;
   z-index: 4000;
   width: 100%;
-  height: 100dvh;
-  overflow: hidden;
+  height: 100%;
+  min-height: 100dvh;
+  overflow-x: hidden;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  touch-action: pan-y;
+  overscroll-behavior-y: contain;
   color: var(--el-text-color-primary);
   background:
       radial-gradient(circle at 12% 4%, color-mix(in srgb, var(--el-color-primary) 18%, transparent), transparent 32%),
       radial-gradient(circle at 88% 10%, rgba(143, 113, 160, .14), transparent 30%),
       var(--el-bg-color-page);
-  display: grid;
-  grid-template-rows: auto minmax(0, 1fr) auto;
 }
 
 .provider-config-header {
+  position: sticky;
+  top: 0;
+  z-index: 20;
   min-height: 66px;
   padding: max(10px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right)) 10px max(16px, env(safe-area-inset-left));
   border-bottom: 1px solid color-mix(in srgb, var(--el-border-color) 78%, transparent);
@@ -627,10 +632,8 @@ watch(() => props.setting?.providerPriority, value => {
 .provider-config-main {
   width: 100%;
   min-width: 0;
-  overflow-x: hidden;
-  overflow-y: auto;
-  overscroll-behavior: contain;
-  padding: 20px max(16px, env(safe-area-inset-right)) 28px max(16px, env(safe-area-inset-left));
+  overflow: visible;
+  padding: 20px max(16px, env(safe-area-inset-right)) max(36px, calc(24px + env(safe-area-inset-bottom))) max(16px, env(safe-area-inset-left));
 }
 .provider-config-main > * { width: min(860px, 100%); margin-left: auto; margin-right: auto; box-sizing: border-box; }
 
@@ -707,14 +710,19 @@ watch(() => props.setting?.providerPriority, value => {
 .field-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0 16px; }
 .provider-danger-row { display: flex; justify-content: flex-end; margin-top: 18px; }
 
-.provider-config-footer {
-  min-height: 72px;
-  padding: 10px max(16px, env(safe-area-inset-right)) max(10px, env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left));
-  border-top: 1px solid color-mix(in srgb, var(--el-border-color) 78%, transparent);
-  background: color-mix(in srgb, var(--el-bg-color) 93%, transparent);
-  backdrop-filter: blur(18px) saturate(118%);
+.domain-danger-zone {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-top: 18px;
+  padding: 16px;
+  border: 1px solid color-mix(in srgb, var(--el-color-danger) 30%, var(--el-border-color));
+  border-radius: 15px;
+  background: color-mix(in srgb, var(--el-color-danger-light-9) 58%, transparent);
 }
-.footer-actions { display: flex; gap: 8px; }
+.domain-danger-zone strong { color: var(--el-color-danger); }
+.domain-danger-zone p { margin: 4px 0 0; color: var(--el-text-color-secondary); font-size: 12px; line-height: 1.55; }
 
 @media (max-width: 860px) {
   .provider-status-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
@@ -747,9 +755,7 @@ watch(() => props.setting?.providerPriority, value => {
   .enable-control { justify-content: flex-end; }
   .field-grid { grid-template-columns: 1fr; }
   .provider-danger-row .el-button { width: 100%; }
-  .provider-config-footer { align-items: stretch; flex-direction: column-reverse; }
-  .provider-config-footer > .el-button { width: 100%; }
-  .footer-actions { display: grid; grid-template-columns: 1fr 1fr; }
-  .footer-actions .el-button { width: 100%; margin: 0; }
+  .domain-danger-zone { flex-direction: column; align-items: stretch; }
+  .domain-danger-zone .el-button { width: 100%; margin: 0; }
 }
 </style>
