@@ -6,6 +6,7 @@ import { emailConst } from '../const/entity-const';
 import kvConst from '../const/kv-const';
 import dayjs from 'dayjs';
 import { toUtc } from '../utils/date-uitil';
+import settingService from './setting-service';
 const analysisService = {
 
 	async echarts(c, params) {
@@ -69,6 +70,88 @@ const analysisService = {
 				sendDayCount
 			},
 			daySendTotal: Number(daySendTotal)
+		};
+	},
+
+	async channels(c, params) {
+		let timeZone = params.timeZone || 'UTC';
+		let localNow;
+		let diffHours = 0;
+
+		try {
+			const utcDate = toUtc().startOf('day');
+			const localDate = utcDate.tz(timeZone);
+			diffHours = dayjs(localDate.format('YYYY-MM-DD HH:mm:ss'))
+				.diff(dayjs(utcDate.format('YYYY-MM-DD HH:mm:ss')), 'hour', true);
+			localNow = toUtc().tz(timeZone);
+		} catch (error) {
+			timeZone = 'UTC';
+			localNow = toUtc();
+			diffHours = 0;
+		}
+
+		const datePattern = /^\d{4}-\d{2}-\d{2}$/;
+		let endDate = datePattern.test(params.endDate || '')
+			? params.endDate
+			: localNow.format('YYYY-MM-DD');
+		let startDate = datePattern.test(params.startDate || '')
+			? params.startDate
+			: localNow.subtract(29, 'day').format('YYYY-MM-DD');
+
+		if (startDate > endDate) [startDate, endDate] = [endDate, startDate];
+
+		const direction = ['all', 'send', 'receive'].includes(params.direction)
+			? params.direction
+			: 'all';
+		const channel = String(params.channel || 'all').toLowerCase().trim() || 'all';
+		const page = Math.max(1, Number.parseInt(params.page) || 1);
+		const pageSize = Math.min(100, Math.max(10, Number.parseInt(params.pageSize) || 20));
+
+		const query = { diffHours, startDate, endDate, direction, channel, page, pageSize };
+		const [summaryRaw, recordData, settingRow] = await Promise.all([
+			analysisDao.channelSummary(c, query),
+			analysisDao.channelRecords(c, query),
+			settingService.query(c)
+		]);
+
+		const summary = summaryRaw.map(item => ({
+			channel: item.channel,
+			direction: item.direction,
+			total: Number(item.total || 0)
+		}));
+
+		const records = recordData.records.map(item => {
+			let target = item.toEmail || '';
+			if (item.direction === 'send') {
+				try {
+					const recipient = JSON.parse(item.recipient || '[]');
+					target = recipient.map(value => value.address || value.email || '').filter(Boolean).join(', ');
+				} catch (error) {
+					target = item.recipient || '';
+				}
+			}
+			return {
+				...item,
+				target,
+				subject: item.subject || '(无主题)',
+				message: item.message || ''
+			};
+		});
+
+		const availableChannels = [...new Set([
+			...summary.map(item => item.channel),
+			'resend', 'brevo', 'postmark', 'mailersend', 'ses', 'internal', 'cloudflare', 'legacy'
+		])];
+
+		return {
+			filters: { startDate, endDate, direction, channel, timeZone },
+			priority: Array.isArray(settingRow.providerPriority) ? settingRow.providerPriority : [],
+			summary,
+			availableChannels,
+			total: recordData.total,
+			records,
+			page,
+			pageSize
 		};
 	},
 

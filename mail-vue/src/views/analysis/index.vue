@@ -114,6 +114,114 @@
           <div class="send-count"></div>
         </div>
       </div>
+
+      <div class="channel-panel">
+        <div class="channel-panel-head">
+          <div>
+            <div class="channel-title">渠道分析</div>
+            <div class="channel-desc">按实际保存的发送渠道统计。外部收件显示为 Cloudflare Email Routing，站内收发显示为站内渠道。</div>
+          </div>
+          <el-button :loading="channelLoading" @click="loadChannelAnalysis(false)">
+            <Icon icon="solar:refresh-linear" width="17" height="17"/>
+            刷新
+          </el-button>
+        </div>
+
+        <div class="channel-priority" v-if="channelData.priority.length">
+          <span class="priority-label">当前站外发件优先级</span>
+          <div class="priority-list">
+            <span v-for="(item, index) in channelData.priority" :key="item" class="priority-item">
+              <b>{{ index + 1 }}</b>{{ channelName(item) }}
+            </span>
+          </div>
+          <span class="priority-tip">下方记录显示最终实际成功的渠道，可用于核对故障切换规则。</span>
+        </div>
+
+        <div class="channel-filters">
+          <el-select v-model="channelQuery.direction" style="width: 140px" @change="onChannelFilterChange">
+            <el-option label="全部收发" value="all"/>
+            <el-option label="仅发送" value="send"/>
+            <el-option label="仅接收" value="receive"/>
+          </el-select>
+          <el-select v-model="channelQuery.channel" filterable style="width: 190px" @change="onChannelFilterChange">
+            <el-option label="全部渠道" value="all"/>
+            <el-option
+              v-for="item in channelData.availableChannels"
+              :key="item"
+              :label="channelName(item)"
+              :value="item"
+            />
+          </el-select>
+          <el-date-picker
+            v-model="channelDateRange"
+            type="daterange"
+            value-format="YYYY-MM-DD"
+            range-separator="至"
+            start-placeholder="开始日期"
+            end-placeholder="结束日期"
+            :clearable="false"
+            @change="onChannelFilterChange"
+          />
+          <el-button type="primary" :loading="channelLoading" @click="loadChannelAnalysis(true)">查询</el-button>
+        </div>
+
+        <div class="channel-summary">
+          <div v-if="!channelData.summary.length" class="channel-empty">当前范围暂无渠道数据</div>
+          <div v-for="item in channelData.summary" :key="item.direction + '-' + item.channel" class="channel-summary-item">
+            <div class="summary-top">
+              <span class="channel-dot" :class="'channel-' + item.channel"></span>
+              <span>{{ channelName(item.channel) }}</span>
+              <el-tag size="small" :type="item.direction === 'send' ? 'success' : 'primary'">
+                {{ item.direction === 'send' ? '发送' : '接收' }}
+              </el-tag>
+            </div>
+            <strong>{{ item.total }}</strong>
+            <span>封邮件</span>
+          </div>
+        </div>
+
+        <div class="channel-table-wrap">
+          <el-table v-loading="channelLoading" :data="channelData.records" stripe style="width: 100%">
+            <el-table-column prop="localTime" label="时间" min-width="165"/>
+            <el-table-column label="方向" width="84">
+              <template #default="scope">
+                <el-tag size="small" :type="scope.row.direction === 'send' ? 'success' : 'primary'">
+                  {{ scope.row.direction === 'send' ? '发送' : '接收' }}
+                </el-tag>
+              </template>
+            </el-table-column>
+            <el-table-column label="实际渠道" min-width="170">
+              <template #default="scope">
+                <span class="channel-cell">
+                  <span class="channel-dot" :class="'channel-' + scope.row.channel"></span>
+                  {{ channelName(scope.row.channel) }}
+                </span>
+              </template>
+            </el-table-column>
+            <el-table-column prop="sendEmail" label="发件人" min-width="200" show-overflow-tooltip/>
+            <el-table-column prop="target" label="收件人" min-width="220" show-overflow-tooltip/>
+            <el-table-column prop="subject" label="主题" min-width="220" show-overflow-tooltip/>
+            <el-table-column label="状态" min-width="105">
+              <template #default="scope">
+                <el-tag size="small" :type="statusType(scope.row.status)">{{ statusName(scope.row.status) }}</el-tag>
+              </template>
+            </el-table-column>
+          </el-table>
+        </div>
+
+        <div class="channel-pagination">
+          <span>共 {{ channelData.total }} 条</span>
+          <el-pagination
+            v-model:current-page="channelQuery.page"
+            v-model:page-size="channelQuery.pageSize"
+            :page-sizes="[10, 20, 50, 100]"
+            layout="sizes, prev, pager, next"
+            :total="channelData.total"
+            @current-change="loadChannelAnalysis(false)"
+            @size-change="onChannelPageSizeChange"
+          />
+        </div>
+      </div>
     </div>
   </el-scrollbar>
 </template>
@@ -124,7 +232,7 @@ import {useTransition} from "@vueuse/core";
 import {defineOptions, onActivated, onDeactivated, onMounted, reactive, ref, watch, computed} from "vue";
 import echarts from "@/echarts/index.js";
 import dayjs from "dayjs";
-import {analysisEcharts} from "@/request/analysis.js";
+import {analysisChannels, analysisEcharts} from "@/request/analysis.js";
 import {useUiStore} from "@/store/ui.js";
 import {debounce} from "lodash-es";
 import loading from "@/components/loading/index.vue";
@@ -144,6 +252,25 @@ const sendTotal = ref(0)
 const accountTotal = ref(0)
 const userTotal = ref(0)
 const analysisLoading = ref(true)
+
+const channelLoading = ref(false)
+const channelDateRange = ref([
+  dayjs().subtract(29, 'day').format('YYYY-MM-DD'),
+  dayjs().format('YYYY-MM-DD')
+])
+const channelQuery = reactive({
+  direction: 'all',
+  channel: 'all',
+  page: 1,
+  pageSize: 20
+})
+const channelData = reactive({
+  priority: [],
+  summary: [],
+  availableChannels: [],
+  records: [],
+  total: 0
+})
 
 const numberCount = reactive({
   normalReceiveTotal: 0,
@@ -209,6 +336,7 @@ let analysisDark = uiStore.dark
 
 onMounted(() => {
   const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+  loadChannelAnalysis(false);
 
   analysisEcharts(timeZone).then(data => {
     receiveTotal.value = data.numberCount.receiveTotal
@@ -315,6 +443,84 @@ function truncateTextByWidth(text, maxWidth = 140) {
     }
   }
   return text;
+}
+
+
+const CHANNEL_NAMES = {
+  resend: 'Resend',
+  brevo: 'Brevo',
+  postmark: 'Postmark',
+  mailersend: 'MailerSend',
+  ses: 'Amazon SES',
+  internal: '站内渠道',
+  cloudflare: 'Cloudflare Email Routing',
+  legacy: '历史/未知渠道'
+}
+
+const STATUS_NAMES = {
+  0: '已接收',
+  1: '已发送',
+  2: '已送达',
+  3: '已退信',
+  4: '被投诉',
+  5: '延迟',
+  7: '无人接收',
+  8: '失败'
+}
+
+function channelName(value) {
+  return CHANNEL_NAMES[value] || value || '未知渠道'
+}
+
+function statusName(value) {
+  return STATUS_NAMES[Number(value)] || '未知'
+}
+
+function statusType(value) {
+  const status = Number(value)
+  if ([0, 1, 2].includes(status)) return 'success'
+  if (status === 5) return 'warning'
+  if ([3, 4, 8].includes(status)) return 'danger'
+  return 'info'
+}
+
+async function loadChannelAnalysis(resetPage = false) {
+  if (resetPage) channelQuery.page = 1
+  channelLoading.value = true
+  try {
+    const [startDate, endDate] = channelDateRange.value || []
+    const data = await analysisChannels({
+      timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+      startDate,
+      endDate,
+      direction: channelQuery.direction,
+      channel: channelQuery.channel,
+      page: channelQuery.page,
+      pageSize: channelQuery.pageSize
+    })
+    channelData.priority = data.priority || []
+    channelData.summary = data.summary || []
+    channelData.availableChannels = data.availableChannels || []
+    channelData.records = data.records || []
+    channelData.total = Number(data.total || 0)
+
+    if (channelQuery.channel !== 'all' && !channelData.availableChannels.includes(channelQuery.channel)) {
+      channelQuery.channel = 'all'
+    }
+  } catch (error) {
+    console.error('加载渠道分析失败', error)
+  } finally {
+    channelLoading.value = false
+  }
+}
+
+function onChannelFilterChange() {
+  loadChannelAnalysis(true)
+}
+
+function onChannelPageSizeChange() {
+  channelQuery.page = 1
+  loadChannelAnalysis(false)
 }
 
 function createSenderPie() {
@@ -922,6 +1128,205 @@ function createSendGauge() {
       }
     }
   }
+
+  .channel-panel {
+    min-width: 0;
+    background: var(--el-bg-color);
+    border: 1px solid var(--el-border-color);
+    border-radius: 14px;
+    padding: 20px;
+    display: grid;
+    gap: 18px;
+
+    @media (max-width: 767px) {
+      padding: 15px;
+      gap: 14px;
+    }
+  }
+
+  .channel-panel-head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+
+    .channel-title {
+      font-size: 19px;
+      font-weight: 650;
+    }
+
+    .channel-desc {
+      color: var(--el-text-color-secondary);
+      font-size: 13px;
+      line-height: 1.65;
+      margin-top: 5px;
+    }
+  }
+
+  .channel-priority {
+    border: 1px solid var(--el-color-primary-light-7);
+    background: var(--el-color-primary-light-9);
+    border-radius: 12px;
+    padding: 13px 15px;
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 10px;
+
+    .priority-label {
+      font-weight: 600;
+    }
+
+    .priority-list {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 7px;
+    }
+
+    .priority-item {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      border: 1px solid var(--el-color-primary-light-5);
+      background: var(--el-bg-color);
+      border-radius: 999px;
+      padding: 5px 9px;
+      font-size: 13px;
+
+      b {
+        display: inline-grid;
+        place-items: center;
+        width: 20px;
+        height: 20px;
+        border-radius: 50%;
+        background: var(--el-color-primary);
+        color: white;
+        font-size: 11px;
+      }
+    }
+
+    .priority-tip {
+      color: var(--el-text-color-secondary);
+      font-size: 12px;
+    }
+  }
+
+  .channel-filters {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 10px;
+
+    @media (max-width: 767px) {
+      display: grid;
+      grid-template-columns: 1fr;
+
+      :deep(.el-select),
+      :deep(.el-date-editor),
+      :deep(.el-button) {
+        width: 100% !important;
+      }
+    }
+  }
+
+  .channel-summary {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(175px, 1fr));
+    gap: 12px;
+  }
+
+  .channel-summary-item {
+    min-width: 0;
+    border: 1px solid var(--el-border-color-lighter);
+    background: var(--el-fill-color-lighter);
+    border-radius: 12px;
+    padding: 14px;
+
+    .summary-top {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      min-width: 0;
+      margin-bottom: 11px;
+
+      > span:nth-child(2) {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      .el-tag {
+        margin-left: auto;
+      }
+    }
+
+    strong {
+      font-size: 25px;
+      margin-right: 5px;
+    }
+
+    > span:last-child {
+      color: var(--el-text-color-secondary);
+      font-size: 13px;
+    }
+  }
+
+  .channel-empty {
+    grid-column: 1 / -1;
+    color: var(--el-text-color-secondary);
+    text-align: center;
+    padding: 24px;
+    border: 1px dashed var(--el-border-color);
+    border-radius: 12px;
+  }
+
+  .channel-dot {
+    flex: none;
+    width: 9px;
+    height: 9px;
+    border-radius: 50%;
+    background: var(--el-color-info);
+  }
+
+  .channel-resend { background: #111827; }
+  .channel-brevo { background: #0b996e; }
+  .channel-postmark { background: #ff6c37; }
+  .channel-mailersend { background: #6c5ce7; }
+  .channel-ses { background: #ff9900; }
+  .channel-internal { background: #3b82f6; }
+  .channel-cloudflare { background: #f48120; }
+  .channel-legacy { background: #909399; }
+
+  .channel-cell {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .channel-table-wrap {
+    width: 100%;
+    min-width: 0;
+    overflow: hidden;
+    border: 1px solid var(--el-border-color-lighter);
+    border-radius: 12px;
+  }
+
+  .channel-pagination {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    color: var(--el-text-color-secondary);
+    font-size: 13px;
+
+    @media (max-width: 767px) {
+      align-items: flex-start;
+      flex-direction: column;
+      overflow-x: auto;
+      padding-bottom: 2px;
+    }
+  }
+
 }
 
 </style>

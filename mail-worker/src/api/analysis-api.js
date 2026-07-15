@@ -6,3 +6,9 @@ app.get('/analysis/echarts', async (c) => {
 	const data = await analysisService.echarts(c, c.req.query());
 	return c.json(result.ok(data));
 })
+
+
+app.get('/analysis/channels', async (c) => {
+	const data = await analysisService.channels(c, c.req.query());
+	return c.json(result.ok(data));
+})

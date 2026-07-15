@@ -100,6 +100,100 @@ const analysisDao = {
         `).all();
 		return results;
 	}
+,
+
+	async channelSummary(c, params) {
+		const { diffHours, startDate, endDate, direction } = params;
+		const offset = Number(diffHours || 0).toFixed(2);
+		const where = ['DATE(local_time) BETWEEN ? AND ?'];
+		const bindings = [startDate, endDate];
+
+		if (direction === 'send' || direction === 'receive') {
+			where.push('direction = ?');
+			bindings.push(direction);
+		}
+
+		const sql = `
+			WITH channel_mail AS (
+				SELECT
+					CASE
+						WHEN type = ${emailConst.type.SEND} THEN
+							CASE WHEN TRIM(COALESCE(send_provider, '')) = '' THEN 'legacy'
+							ELSE LOWER(TRIM(send_provider)) END
+						WHEN LOWER(TRIM(COALESCE(send_provider, ''))) = 'internal' THEN 'internal'
+						ELSE 'cloudflare'
+					END AS channel,
+					CASE WHEN type = ${emailConst.type.SEND} THEN 'send' ELSE 'receive' END AS direction,
+					DATETIME(create_time, '${offset} hours') AS local_time
+				FROM email
+				WHERE status != ${emailConst.status.SAVING}
+			)
+			SELECT channel, direction, COUNT(*) AS total
+			FROM channel_mail
+			WHERE ${where.join(' AND ')}
+			GROUP BY channel, direction
+			ORDER BY total DESC, channel ASC
+		`;
+
+		const { results } = await c.env.db.prepare(sql).bind(...bindings).all();
+		return results;
+	},
+
+	async channelRecords(c, params) {
+		const { diffHours, startDate, endDate, direction, channel, page, pageSize } = params;
+		const offset = Number(diffHours || 0).toFixed(2);
+		const where = ['DATE(local_time) BETWEEN ? AND ?'];
+		const bindings = [startDate, endDate];
+
+		if (direction === 'send' || direction === 'receive') {
+			where.push('direction = ?');
+			bindings.push(direction);
+		}
+		if (channel && channel !== 'all') {
+			where.push('channel = ?');
+			bindings.push(channel);
+		}
+
+		const cte = `
+			WITH channel_mail AS (
+				SELECT
+					email_id AS emailId,
+					send_email AS sendEmail,
+					to_email AS toEmail,
+					recipient,
+					subject,
+					status,
+					message,
+					CASE
+						WHEN type = ${emailConst.type.SEND} THEN
+							CASE WHEN TRIM(COALESCE(send_provider, '')) = '' THEN 'legacy'
+							ELSE LOWER(TRIM(send_provider)) END
+						WHEN LOWER(TRIM(COALESCE(send_provider, ''))) = 'internal' THEN 'internal'
+						ELSE 'cloudflare'
+					END AS channel,
+					CASE WHEN type = ${emailConst.type.SEND} THEN 'send' ELSE 'receive' END AS direction,
+					DATETIME(create_time, '${offset} hours') AS local_time
+				FROM email
+				WHERE status != ${emailConst.status.SAVING}
+			)
+		`;
+
+		const whereSql = where.join(' AND ');
+		const countRow = await c.env.db.prepare(`${cte} SELECT COUNT(*) AS total FROM channel_mail WHERE ${whereSql}`)
+			.bind(...bindings).first();
+		const offsetRows = (page - 1) * pageSize;
+		const { results } = await c.env.db.prepare(`
+			${cte}
+			SELECT emailId, sendEmail, toEmail, recipient, subject, status, message,
+				channel, direction, local_time AS localTime
+			FROM channel_mail
+			WHERE ${whereSql}
+			ORDER BY local_time DESC, emailId DESC
+			LIMIT ? OFFSET ?
+		`).bind(...bindings, pageSize, offsetRows).all();
+
+		return { total: Number(countRow?.total || 0), records: results };
+	}
 
 };
 
