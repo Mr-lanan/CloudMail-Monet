@@ -73,15 +73,31 @@ function inlineImagesAsDataUri(html, attachments) {
 }
 
 async function parseError(response, provider) {
-    let message = `${provider} 请求失败（HTTP ${response.status}）`;
-    try {
-        const data = await response.json();
-        message = data?.message || data?.error?.message || data?.error || message;
-    } catch {
-        const text = await response.text().catch(() => '');
-        if (text) message = text.slice(0, 500);
+    const fallback = `${provider} 请求失败（HTTP ${response.status}）`;
+    const raw = await response.text().catch(() => '');
+    let data = null;
+
+    if (raw) {
+        try {
+            data = JSON.parse(raw);
+        } catch {
+            // Non-JSON provider response; the raw text is used below.
+        }
     }
-    throw new Error(message);
+
+    const detail = data?.Message
+        || data?.message
+        || data?.error?.message
+        || data?.error
+        || data?.detail
+        || (raw && raw.slice(0, 500))
+        || fallback;
+    const errorCode = data?.ErrorCode ?? data?.errorCode ?? data?.code;
+    const prefix = detail === fallback ? detail : `${provider}: ${detail}`;
+
+    throw new Error(errorCode !== undefined && errorCode !== null
+        ? `${prefix}（错误码 ${errorCode}，HTTP ${response.status}）`
+        : `${prefix}（HTTP ${response.status}）`);
 }
 
 async function sendResend(config, message) {
@@ -131,23 +147,29 @@ async function sendMailerSend(config, message) {
 }
 
 async function sendBrevo(config, message) {
+    const payload = {
+        sender: { email: message.fromEmail, name: message.fromName },
+        to: message.to.map(email => ({ email })),
+        subject: message.subject,
+        textContent: message.text || undefined,
+        htmlContent: inlineImagesAsDataUri(message.html, message.attachments)
+    };
+    const attachments = message.attachments
+        .filter(item => !item.inline)
+        .map(item => ({ content: item.content, name: item.filename }));
+
+    // Brevo's attachment field is optional. Sending attachment: [] is rejected
+    // by some API validation paths with "attachment is missing".
+    if (attachments.length > 0) payload.attachment = attachments;
+    if (message.headers.length > 0) payload.headers = headersToObject(message.headers);
+
     const response = await fetch('https://api.brevo.com/v3/smtp/email', {
         method: 'POST',
         headers: {
             'api-key': config.apiKey,
             'Content-Type': 'application/json'
         },
-        body: JSON.stringify({
-            sender: { email: message.fromEmail, name: message.fromName },
-            to: message.to.map(email => ({ email })),
-            subject: message.subject,
-            textContent: message.text,
-            htmlContent: inlineImagesAsDataUri(message.html, message.attachments),
-            attachment: message.attachments.filter(item => !item.inline).map(item => ({
-                content: item.content,
-                name: item.filename
-            }))
-        })
+        body: JSON.stringify(payload)
     });
     if (!response.ok) await parseError(response, 'Brevo');
     const data = await response.json();
@@ -155,6 +177,25 @@ async function sendBrevo(config, message) {
 }
 
 async function sendPostmark(config, message) {
+    const payload = {
+        From: message.from,
+        To: message.to.join(','),
+        Subject: message.subject,
+        TextBody: message.text || undefined,
+        HtmlBody: message.html || undefined,
+        MessageStream: (config.messageStream || 'outbound').trim()
+    };
+
+    const headers = headersToArray(message.headers);
+    const attachments = message.attachments.map(item => ({
+        Name: item.filename,
+        Content: item.content,
+        ContentType: item.contentType,
+        ContentID: item.contentId ? `cid:${item.contentId}` : undefined
+    }));
+    if (headers.length > 0) payload.Headers = headers;
+    if (attachments.length > 0) payload.Attachments = attachments;
+
     const response = await fetch('https://api.postmarkapp.com/email', {
         method: 'POST',
         headers: {
@@ -162,24 +203,13 @@ async function sendPostmark(config, message) {
             'Content-Type': 'application/json',
             Accept: 'application/json'
         },
-        body: JSON.stringify({
-            From: message.from,
-            To: message.to.join(','),
-            Subject: message.subject,
-            TextBody: message.text,
-            HtmlBody: message.html,
-            MessageStream: config.messageStream || 'outbound',
-            Headers: headersToArray(message.headers),
-            Attachments: message.attachments.map(item => ({
-                Name: item.filename,
-                Content: item.content,
-                ContentType: item.contentType,
-                ContentID: item.contentId ? `cid:${item.contentId}` : undefined
-            }))
-        })
+        body: JSON.stringify(payload)
     });
     if (!response.ok) await parseError(response, 'Postmark');
     const data = await response.json();
+    if (Number(data.ErrorCode || 0) !== 0) {
+        throw new Error(`Postmark: ${data.Message || '发送失败'}（错误码 ${data.ErrorCode}）`);
+    }
     return { id: data.MessageID || '', raw: data };
 }
 
