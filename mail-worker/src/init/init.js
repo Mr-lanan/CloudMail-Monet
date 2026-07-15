@@ -47,6 +47,16 @@ const dbInit = {
 				console.warn(`跳过字段：${e.message}`);
 			}
 		}
+
+		// 清除旧版本预置的原作者免责声明弹窗，不影响用户自行编辑的公告。
+		const legacyNotice = '本项目仅供学习交流，禁止用于违法业务\n<br>\n请遵守当地法规，作者不承担任何法律责任';
+		try {
+			await c.env.db.prepare(
+				`UPDATE setting SET notice_content = '', notice = 0 WHERE notice_content = ?`
+			).bind(legacyNotice).run();
+		} catch (e) {
+			console.warn(`跳过旧公告清理：${e.message}`);
+		}
 	},
 
 	async v2_9DB(c) {
@@ -178,9 +188,6 @@ const dbInit = {
 
 	async v1_6DB(c) {
 
-		const noticeContent = '本项目仅供学习交流，禁止用于违法业务\n' +
-			'<br>\n' +
-			'请遵守当地法规，作者不承担任何法律责任'
 
 		const ADD_COLUMN_SQL_LIST = [
 			`ALTER TABLE setting ADD COLUMN reg_verify_count INTEGER NOT NULL DEFAULT 1;`,
@@ -214,7 +221,6 @@ const dbInit = {
 		});
 
 		await Promise.all(promises);
-		await c.env.db.prepare(`UPDATE setting SET notice_content = ? WHERE notice_content = '';`).bind(noticeContent).run();
 		try {
 			await c.env.db.batch([
 				c.env.db.prepare(`DROP INDEX IF EXISTS idx_account_email`),

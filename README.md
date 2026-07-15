@@ -2,6 +2,16 @@
 
 CloudMail Monet 是在完整 `cloud-mail` 邮箱系统基础上改造的 Cloudflare 邮件平台。它不是单纯的发件 API，而是一套可以创建 `@你的域名` 邮箱、收取邮件、查看附件、写信、回复、转发和管理用户的完整邮箱系统。
 
+## 二次开发声明
+
+CloudMail Monet 是基于开源项目 [`maillab/cloud-mail`](https://github.com/maillab/cloud-mail) 进行二次开发的独立项目。
+
+本项目保留原项目的 MIT 许可证和版权声明，并在其完整邮箱能力基础上重新设计界面、扩展多服务商发件、故障切换、配置加密及其他功能。CloudMail Monet 与原项目作者及维护团队不存在隶属、赞助或官方合作关系；本项目的修改、部署与维护由 CloudMail Monet 项目自行负责。
+
+原项目地址：<https://github.com/maillab/cloud-mail>
+
+---
+
 本版本保留原项目成熟的收件、账户、权限、D1、KV、R2 和附件逻辑，并把原来仅支持 Resend 的站外发件功能升级为：
 
 - Resend
@@ -523,4 +533,4 @@ DNS、MX、`mail.282520.xyz` 和现有 Email Routing 均未修改。
 
 ## License
 
-MIT License。原项目许可和版权信息保留在 `LICENSE` 中。
+MIT License。二次开发来源和原项目链接已在“二次开发声明”中列明；原项目版权及许可文本保留在 `LICENSE` 中。

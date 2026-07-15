@@ -251,7 +251,7 @@ const en = {
     sendInternal: 'Only internal',
     wrote: 'wrote',
     support: 'Support',
-    supportDesc: 'Buy me tea',
+    supportDesc: 'Not available',
     featDesc: 'Feature Description',
     emailInterception: 'Email Interception',
     emailInterceptionDesc: 'Enter a domain or email address to prevent users from receiving emails from certain websites (Enter * to block all)',
