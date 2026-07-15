@@ -1,0 +1,39 @@
+name = "cloudmail-monet-full"
+main = "src/index.js"
+compatibility_date = "2025-06-04"
+keep_vars = true
+
+[observability]
+enabled = true
+
+# 默认自动创建一套独立测试资源，不在 GitHub 中保存资源 ID。
+# 绑定名称 db / kv / r2 被后端代码使用，请勿修改。
+[[d1_databases]]
+binding = "db"
+
+[[kv_namespaces]]
+binding = "kv"
+
+[[r2_buckets]]
+binding = "r2"
+
+[assets]
+binding = "assets"
+directory = "./dist"
+not_found_handling = "single-page-application"
+run_worker_first = true
+
+[triggers]
+crons = ["0 16 * * *"]
+
+[vars]
+orm_log = false
+project_link = false
+
+# 以下运行变量请部署后在 Cloudflare 后台添加：
+# domain = ["282520.xyz"]
+# admin = "你的管理员邮箱@282520.xyz"
+#
+# 以下必须以 Secret 形式添加：
+# jwt_secret
+# mail_config_secret

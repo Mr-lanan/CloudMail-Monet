@@ -1,0 +1,33 @@
+name = "cloudmail-monet-test"
+main = "src/index.js"
+compatibility_date = "2025-06-04"
+keep_vars = true
+
+[observability]
+enabled = true
+
+[[d1_databases]]
+binding = "db"
+
+[[kv_namespaces]]
+binding = "kv"
+
+[[r2_buckets]]
+binding = "r2"
+
+[assets]
+binding = "assets"
+directory = "./dist"
+not_found_handling = "single-page-application"
+run_worker_first = true
+
+[triggers]
+crons = ["0 16 * * *"]
+
+[vars]
+orm_log = false
+domain = ["example.com"]
+admin = "admin@example.com"
+jwt_secret = "test-only-change-me"
+mail_config_secret = "test-mail-config-secret-change-me"
+project_link = false
