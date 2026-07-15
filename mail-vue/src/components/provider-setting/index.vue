@@ -187,7 +187,7 @@ function save() {
   emit('save', {
     providerPriority: [...priority.value],
     mailProviders: {
-      [selectedDomain.value]: structuredClone(form)
+      [selectedDomain.value]: JSON.parse(JSON.stringify(form))
     }
   });
   dialogVisible.value = false;
